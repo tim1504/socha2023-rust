@@ -4,7 +4,6 @@ use std::time;
 
 use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
 
-
 pub struct OwnLogic;
 
 impl GameClientDelegate for OwnLogic {
@@ -20,28 +19,18 @@ impl GameClientDelegate for OwnLogic {
         //Runs for 2 seconds
         let start = time::Instant::now();
 
-        let mut c = 0;
-
         while start.elapsed().as_millis() < 1800 {
-            c += 1;
             root.mcts();
         }
-
-        println!("Rounds: {}", c);
 
         //Return best move
         root.select_child().state.last_move().unwrap()
 
     }
 
-    fn on_game_end(&mut self, _result: &socha_client_2023::protocol::GameResult) {
-        //do sth
-    }
+    fn on_game_end(&mut self, _result: &socha_client_2023::protocol::GameResult) {}
 
-    fn on_update_state(&mut self, state: &State) {
-        debug!("Board:\n{}", state.board());
-    }
-    
+    fn on_update_state(&mut self, state: &State) { debug!("Board:\n{}", state.board()) }
     
 }
 
@@ -114,48 +103,6 @@ impl Node {
             state.perform(random_move);
         }
         (state.fish(team) - state.fish(team.opponent())) as i32
-        /*
-        if state.winner().is_none() {
-            return 0
-        }
-        if state.winner().unwrap().eq(&team) {
-            return 1
-        }
-        -1
-        */
     }
 
 }
-
-
-            /* 
-            //Selection
-            while !current.children.is_empty() {
-                //Select child with highest UCT
-                current = current.select_child();
-            }
-
-            //Expansion
-            if current.visits > 0 {
-                current.expand();
-                current = current.select_child();
-            }
-
-            //Rollout
-            let mut sum = 0;
-            for _i in 0..100 {
-                sum += current.rollout(state.current_team());
-            }
-
-            current.visits += 1;
-            current.total += sum;
-
-            //Backpropagate
-            while current.parent.is_some() {
-                current = *current.parent.unwrap();
-                current.visits += 1;
-                current.total += sum;
-            }
-            
-        }
-        */
