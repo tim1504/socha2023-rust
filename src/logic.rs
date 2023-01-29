@@ -20,7 +20,7 @@ impl GameClientDelegate for OwnLogic {
         let start = time::Instant::now();
 
         while start.elapsed().as_millis() < 1800 {
-            root.mcts();
+            root.mcts(&state.current_team());
         }
 
         //Return best move
@@ -52,17 +52,17 @@ impl Node {
         }
     }
 
-    fn mcts(&mut self) -> i32 {
+    fn mcts(&mut self, team: &Team) -> i32 {
         let mut result = 0;
         if self.visits > 0 && !self.state.is_over(){
             if self.children.is_empty() {
                 self.expand();
             }
             let selected_child = self.select_child();
-            result = selected_child.mcts();
+            result = selected_child.mcts(team);
         } else {
             for _i in 0..100 {
-                result += self.rollout(self.state.current_team());
+                result += self.rollout(team);
             }
         }
         self.visits += 1;
@@ -74,7 +74,7 @@ impl Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
         for child in self.children.iter_mut() {
-            let mut score = (child.total as f64 / child.visits as f64) + (2.0*(self.visits as f64).ln() / child.visits as f64).sqrt();
+            let mut score = (child.total as f64 / child.visits as f64) + 2.0 * ((self.visits as f64).ln() / child.visits as f64).sqrt();
             if child.visits == 0 {
                 score = f64::MAX;
             }
@@ -94,7 +94,7 @@ impl Node {
         }
     }
 
-    fn rollout(&mut self, team: Team) -> i32 {
+    fn rollout(&mut self, team: &Team) -> i32 {
         let mut state = self.state.clone();
         while !state.is_over() {
             let random_move = *state.possible_moves()
@@ -102,7 +102,13 @@ impl Node {
                 .expect("No move found!");
             state.perform(random_move);
         }
-        (state.fish(team) - state.fish(team.opponent())) as i32
+        if state.winner().is_none() {
+            return 0
+        }
+        if state.winner().unwrap().eq(team) {
+            return 1
+        }
+        -1
     }
 
 }
