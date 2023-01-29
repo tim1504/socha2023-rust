@@ -13,12 +13,13 @@ impl GameClientDelegate for OwnLogic {
 
         //Create root node
         let mut root = Node::new(state.clone());
+
         //Expand root node
         root.expand();
 
-        //Runs for 2 seconds
         let start = time::Instant::now();
 
+        //Run MCTS algorithm for about 2 seconds
         while start.elapsed().as_millis() < 1800 {
             root.mcts(&state.current_team());
         }
@@ -34,6 +35,7 @@ impl GameClientDelegate for OwnLogic {
     
 }
 
+//Node struct for MCTS algorithm
 struct Node {
     state: State,
     children: Vec<Node>,
@@ -41,8 +43,10 @@ struct Node {
     total: i32,
 }
 
+//Node methods
 impl Node {
 
+    // Constructor
     fn new(state: State) -> Self {
         Node {
             state,
@@ -52,6 +56,7 @@ impl Node {
         }
     }
 
+    // MCTS algorithm
     fn mcts(&mut self, team: &Team) -> i32 {
         let mut result = 0;
         if self.visits > 0 && !self.state.is_over(){
@@ -70,6 +75,7 @@ impl Node {
         return result;
     }
     
+    // Selects the best child node based on the UCB1 formula
     fn select_child(&mut self) -> &mut Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
@@ -86,6 +92,7 @@ impl Node {
         best_child.unwrap()
     }
 
+    // Expands the node by creating a child node for each possible move
     fn expand(&mut self) {
         for m in self.state.possible_moves() {
             let mut next_state = self.state.clone();
@@ -94,6 +101,8 @@ impl Node {
         }
     }
 
+    // Performs a random rollout from the current state
+    // Returns the difference in fish between the current team and the opponent
     fn rollout(&mut self, team: &Team) -> i32 {
         let mut state = self.state.clone();
         while !state.is_over() {
@@ -102,13 +111,7 @@ impl Node {
                 .expect("No move found!");
             state.perform(random_move);
         }
-        if state.winner().is_none() {
-            return 0
-        }
-        if state.winner().unwrap().eq(team) {
-            return 1
-        }
-        -1
+        (state.fish(team.to_owned()) - state.fish(team.opponent())) as i32
     }
 
 }
