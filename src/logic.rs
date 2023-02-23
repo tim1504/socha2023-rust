@@ -1,6 +1,10 @@
+use crate::args;
+use args::ClientArgs;
+
 use log::{info, debug};
 use rand::seq::SliceRandom;
 use std::time;
+use clap::Parser;
 
 use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
 
@@ -8,6 +12,12 @@ pub struct OwnLogic;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
+
+        //Parse arguments
+        let args = ClientArgs::parse();
+        let time = args.time;
+        let exploration_constant = args.exploration_constant;
+        let n_simulations = args.n_simulations;
 
         info!("Requested move");
 
@@ -19,13 +29,13 @@ impl GameClientDelegate for OwnLogic {
 
         let start = time::Instant::now();
 
-        //Run MCTS algorithm for about 2 seconds
-        while start.elapsed().as_millis() < 1800 {
-            root.mcts(&state.current_team());
+        //Run MCTS algorithm for given time or default 1 second
+        while start.elapsed().as_millis() < time as u128 {
+            root.mcts(&state.current_team(), exploration_constant, n_simulations);
         }
 
         //Return best move
-        root.select_child().state.last_move().unwrap()
+        root.select_child(exploration_constant).state.last_move().unwrap()
 
     }
 
@@ -57,16 +67,16 @@ impl Node {
     }
 
     // MCTS algorithm
-    fn mcts(&mut self, team: &Team) -> i32 {
+    fn mcts(&mut self, team: &Team, c: f64, n: u32) -> i32 {
         let mut result = 0;
         if self.visits > 0 && !self.state.is_over(){
             if self.children.is_empty() {
                 self.expand();
             }
-            let selected_child = self.select_child();
-            result = selected_child.mcts(team);
+            let selected_child = self.select_child(c);
+            result = selected_child.mcts(team, c, n);
         } else {
-            for _i in 0..100 {
+            for _i in 0..n {
                 result += self.rollout(team);
             }
         }
@@ -76,11 +86,11 @@ impl Node {
     }
     
     // Selects the best child node based on the UCB1 formula
-    fn select_child(&mut self) -> &mut Node {
+    fn select_child(&mut self, c: f64) -> &mut Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
         for child in self.children.iter_mut() {
-            let mut score = (child.total as f64 / child.visits as f64) + 2.0 * ((self.visits as f64).ln() / child.visits as f64).sqrt();
+            let mut score = (child.total as f64 / child.visits as f64) + c * ((self.visits as f64).ln() / child.visits as f64).sqrt();
             if child.visits == 0 {
                 score = f64::MAX;
             }
