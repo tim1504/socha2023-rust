@@ -6,7 +6,7 @@ use args::ClientArgs;
 use clap::Parser;
 use simplelog::{SimpleLogger, Config};
 use log::LevelFilter;
-use socha_client_2023::client::{GameClient, DebugMode};
+use socha_client_2023::{client::{GameClient, DebugMode}};
 
 use logic::OwnLogic;
 
@@ -15,7 +15,7 @@ use logic::OwnLogic;
 fn main() {
     // Parse command line arguments
     let args = ClientArgs::parse();
-    
+
     // Set up logging
     SimpleLogger::init(LevelFilter::from_str(&args.level).expect("Invalid log level."), Config::default()).expect("Could not initialize logger.");
     
@@ -25,6 +25,6 @@ fn main() {
         debug_writer: args.debug_writer,
     };
 
-    let client = GameClient::new(OwnLogic, debug_mode, args.reservation);
+    let client = GameClient::new(OwnLogic{time: args.time, exploration_constant: args.exploration_constant, n_simulations: args.n_simulations}, debug_mode, args.reservation);
     let _result = client.connect(&args.host, args.port).expect("Error while running client.");
 }
