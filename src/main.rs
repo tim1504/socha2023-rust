@@ -25,6 +25,14 @@ fn main() {
         debug_writer: args.debug_writer,
     };
 
-    let client = GameClient::new(OwnLogic{time: args.time, exploration_constant: args.exploration_constant, n_simulations: args.n_simulations}, debug_mode, args.reservation);
+    let logic = OwnLogic{
+        time: args.time,
+        exploration_constant: args.exploration_constant,
+        n_simulations: args.n_simulations,
+        our_team: None,
+        test: args.test,
+    }; 
+
+    let client = GameClient::new(logic, debug_mode, args.reservation);
     let _result = client.connect(&args.host, args.port).expect("Error while running client.");
 }
