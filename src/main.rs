@@ -1,6 +1,8 @@
 mod logic;
+mod args;
 
 use std::str::FromStr;
+use args::ClientArgs;
 use clap::Parser;
 use simplelog::{SimpleLogger, Config};
 use log::LevelFilter;
@@ -9,31 +11,10 @@ use socha_client_2023::client::{GameClient, DebugMode};
 use logic::OwnLogic;
 
 /// Software Challenge 2023 client.
-#[derive(Parser, Debug)]
-struct Args {
-    /// The game server's host address.
-    #[clap(short, long, default_value = "localhost")]
-    host: String,
-    /// The game server's port.
-    #[clap(short, long, default_value_t = 13050)]
-    port: u16,
-    /// A game reservation.
-    #[clap(short, long)]
-    reservation: Option<String>,
-    /// The level to log at.
-    #[clap(short, long, default_value = "Info")]
-    level: String,
-    /// Reads incoming XML messages from the console for debugging.
-    #[clap(short = 'd', long)]
-    debug_reader: bool,
-    /// Prints outgoing XML messages to the console for debugging.
-    #[clap(short = 'D', long)]
-    debug_writer: bool,
-}
 
 fn main() {
     // Parse command line arguments
-    let args = Args::parse();
+    let args = ClientArgs::parse();
     
     // Set up logging
     SimpleLogger::init(LevelFilter::from_str(&args.level).expect("Invalid log level."), Config::default()).expect("Could not initialize logger.");
