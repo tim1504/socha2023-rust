@@ -136,6 +136,16 @@ impl State {
         next.perform(m);
         next
     }
+
+    /// Returns whether a winner can already be determined by the current state
+    pub fn is_terminal(&self) -> bool {
+        if self.is_over() {
+            return true
+        }
+        let total_fishes: usize = self.board().fields().fold(0, |c, f| c + f.1.fish()) + self.fish.iter().sum::<usize>();
+        self.fish.iter().any(|&f| (f as f64 / total_fishes as f64) > 0.5)
+    }
+
 }
 
 impl TryFrom<&Element> for State {
