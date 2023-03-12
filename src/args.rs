@@ -12,6 +12,9 @@ pub struct ClientArgs {
     /// The number of random simulatins per rollout
     #[clap(short = 's', long = "n_simulations", default_value_t = 100)]
     pub n_simulations: u32,
+    /// The number of monte carlo simulations per move request
+    #[clap(short = 'i', long = "n_iterations")]
+    pub n_iterations: Option<u32>,
     #[clap(short, long = "test", default_value_t = false)]
     pub test: bool,
 

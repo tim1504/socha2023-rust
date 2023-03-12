@@ -29,6 +29,7 @@ fn main() {
         time: args.time,
         exploration_constant: args.exploration_constant,
         n_simulations: args.n_simulations,
+        n_iterations: args.n_iterations,
         our_team: None,
         test: args.test,
     }; 

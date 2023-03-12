@@ -12,6 +12,7 @@ pub struct OwnLogic {
     pub exploration_constant: f64, 
     pub n_simulations: u32,
     pub our_team: Option<Team>,
+    pub n_iterations: Option<u32>,
     pub test: bool,
 }
 
@@ -33,8 +34,14 @@ impl GameClientDelegate for OwnLogic {
 
         let start = time::Instant::now();
 
+        let mut iterations: u32 = 0;
+
         //Run MCTS algorithm for given time or default 1 second
         while start.elapsed().as_millis() < self.time as u128 {
+            iterations+=1;
+            if self.n_iterations.is_some() && self.n_iterations.unwrap() <= iterations {
+                break;
+            }
             root.mcts(&state.current_team(), self.exploration_constant, self.n_simulations);
         }
 
