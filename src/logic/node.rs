@@ -25,7 +25,7 @@ impl Node {
     // MCTS algorithm
     pub fn mcts(&mut self, team: &Team, c: f64, n: u32) -> i32 {
         let mut result = 0;
-        if self.visits > 0 && !self.state.is_over(){
+        if self.visits > 0 && !self.state.is_terminal() {
             if self.children.is_empty() {
                 self.expand();
             }
@@ -71,13 +71,21 @@ impl Node {
     // Returns the difference in fish between the current team and the opponent
     pub fn rollout(&mut self, team: &Team) -> i32 {
         let mut state = self.state.clone();
-        while !state.is_over() {
+        while !state.is_terminal() {
             let random_move = *state.possible_moves()
                 .choose(&mut rand::thread_rng())
                 .expect("No move found!");
             state.perform(random_move);
         }
-        (state.fish(team.to_owned()) - state.fish(team.opponent())) as i32
+        let us = state.fish(team.to_owned());
+        let opponent = state.fish(team.opponent());
+        if us > opponent {
+            1
+        } else if us < opponent {
+            -1
+        } else {
+            0
+        }
     }
 
 }
