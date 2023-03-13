@@ -20,7 +20,7 @@ impl GameClientDelegate for OwnLogic {
         let start = time::Instant::now();
 
         //Run MCTS algorithm for about 2 seconds
-        while start.elapsed().as_millis() < 1800 {
+        while start.elapsed().as_millis() < 500 {
             root.mcts(&state.current_team());
         }
 
