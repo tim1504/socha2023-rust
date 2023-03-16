@@ -1,6 +1,5 @@
 
-use rand::seq::SliceRandom;
-use socha_client_2023::game::{Team, State};
+use socha_client_2023::game::{Team, State, Move};
 
 //Node struct for MCTS algorithm
 pub struct Node {
@@ -72,10 +71,7 @@ impl Node {
     pub fn rollout(&mut self, team: &Team) -> i32 {
         let mut state = self.state.clone();
         while !state.is_terminal() {
-            let random_move = *state.possible_moves()
-                .choose(&mut rand::thread_rng())
-                .expect("No move found!");
-            state.perform(random_move);
+            state.perform(Self::best_move(&state));
         }
         let us = state.fish(team.to_owned());
         let opponent = state.fish(team.opponent());
@@ -86,6 +82,34 @@ impl Node {
         } else {
             0
         }
+    }
+
+    // Returns a heuristic estimate of the value of a given state
+    fn heuristic(state: &State, team: &Team) -> i32 {
+        let mut score = 0;
+        for penguin in state.board().penguins() {
+            if penguin.1 == *team {
+                score += state.board().possible_moves_from(penguin.0).count() as i32;
+            } else {
+                score -= 2*state.board().possible_moves_from(penguin.0).count() as i32;
+            }
+        }
+        score
+    }
+
+    fn best_move(state: &State) -> Move {
+        let mut max = i32::MIN;
+        let mut best_move = None;
+        for m in state.possible_moves() {
+            let mut next_state = state.clone();
+            next_state.perform(m);
+            let score = Self::heuristic(&next_state, &state.current_team());
+            if score >= max {
+                max = score;
+                best_move = Some(m);
+            }
+        }
+        best_move.unwrap()
     }
 
 }
