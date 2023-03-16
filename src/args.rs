@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, ArgAction};
 
 #[derive(Parser, Debug)]
 pub struct ClientArgs {
@@ -15,7 +15,7 @@ pub struct ClientArgs {
     /// The number of monte carlo simulations per move request
     #[clap(short = 'i', long = "n_iterations")]
     pub n_iterations: Option<u32>,
-    #[clap(short, long = "test", default_value_t = false)]
+    #[clap(short = 'y', long = "test", action=ArgAction::SetTrue)]
     pub test: bool,
 
     /// The game server's host address.
