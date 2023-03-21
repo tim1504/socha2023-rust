@@ -20,10 +20,12 @@ impl GameClientDelegate for OwnLogic {
         let start = time::Instant::now();
 
         //Run MCTS algorithm for about 2 seconds
+        let mut index = 0;
         while start.elapsed().as_millis() < 1800 {
             root.mcts(&state.current_team());
+            index += 1;
         }
-
+        println!("{}", index);
         //Return best move
         root.select_next_move().state.last_move().unwrap()
 
@@ -39,7 +41,7 @@ impl GameClientDelegate for OwnLogic {
 struct Node {
     state: State,
     children: Vec<Node>,
-    visits: u32,
+    visits: i32,
     total: i32,
 }
 
@@ -94,9 +96,10 @@ impl Node {
 
     //selects the child in which the algorithm trusts most
     fn select_next_move(&mut self) -> &mut Node {
-        let mut highest_trust = u32::MIN;
+        let mut highest_trust = i32::MIN;
         let mut best_child = None;
         for child in self.children.iter_mut() {
+            println!("{}",child.visits as i32);
             if child.visits > highest_trust {
                 highest_trust = child.visits;
                 best_child = Some(child);
