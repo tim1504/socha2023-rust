@@ -20,12 +20,12 @@ impl GameClientDelegate for OwnLogic {
         let start = time::Instant::now();
 
         //Run MCTS algorithm for about 2 seconds
-        while start.elapsed().as_millis() < 500 {
+        while start.elapsed().as_millis() < 1800 {
             root.mcts(&state.current_team());
         }
 
         //Return best move
-        root.select_child().state.last_move().unwrap()
+        root.select_next_move().state.last_move().unwrap()
 
     }
 
@@ -92,6 +92,19 @@ impl Node {
         best_child.unwrap()
     }
 
+    //selects the child in which the algorithm trusts most
+    fn select_next_move(&mut self) -> &mut Node {
+        let mut highest_trust = i32::MIN;
+        let mut best_child = None;
+        for child in self.children.iter_mut() {
+            if(child.visits > highest_trust) {
+                best_child = Some(child);
+                highest_trust = child.visits;
+            }
+        }
+        best_child.unwrap()
+    }
+
     // Expands the node by creating a child node for each possible move
     fn expand(&mut self) {
         for m in self.state.possible_moves() {
@@ -102,24 +115,19 @@ impl Node {
     }
 
     // Performs a random rollout from the current state
-    // Returns the difference in fish between the current team and the opponent
-    fn rollout(&mut self, team: &Team) -> i32 {
+    // Returns a number between 0 and 1
+    // The number resembles how many percent of fish the player has at the end of the game
+    fn rollout(&mut self, team: &Team) -> f64 {
         let mut state = self.state.clone();
-        while !state.is_terminal() {
+        while !state.is_over() {
             let random_move = *state.possible_moves()
                 .choose(&mut rand::thread_rng())
                 .expect("No move found!");
             state.perform(random_move);
         }
-        let us = state.fish(team.to_owned());
-        let opponent = state.fish(team.opponent());
-        if us > opponent {
-            1
-        } else if us < opponent {
-            -1
-        } else {
-            0
-        }
+        let us = state.fish(team.to_owned()) as f64;
+        let opponent = state.fish(team.opponent()) as f64;
+        (us)/(us+opponent)
     }
 
 }
