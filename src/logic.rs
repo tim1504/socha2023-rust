@@ -7,7 +7,8 @@ use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
 pub struct OwnLogic;
 
 pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
-pub const TIME_LIMIT: u128 = 1800;
+pub const TIME_LIMIT: u128 = 1900;
+pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
@@ -83,7 +84,12 @@ impl Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
         for child in self.children.iter_mut() {
-            let score = if child.visits > 0 {child.total / ((child.visits as f64)*SIMULATIONS_PER_ROLLOUT as f64)} else {f64::MAX};
+            let score = if child.visits > 0 {
+                child.total / ((child.visits as f64)*SIMULATIONS_PER_ROLLOUT as f64)
+                + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
+            } else {
+                f64::MAX
+            };
             if score >= best_score {
                 best_child = Some(child);
                 best_score = score;
