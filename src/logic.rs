@@ -28,8 +28,8 @@ impl GameClientDelegate for OwnLogic {
             root.mcts(&state.current_team());
         }
 
-        //Return best move
-        root.select_child(true).state.last_move().unwrap()
+        //Return the move with the highest number of visits
+        root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap()
 
     }
 
@@ -67,7 +67,7 @@ impl Node {
             if self.children.is_empty() {
                 self.expand();
             }
-            let selected_child = self.select_child(false);
+            let selected_child = self.select_child();
             result = selected_child.mcts(team);
         } else {
             for _i in 0..SIMULATIONS_PER_ROLLOUT {
@@ -80,7 +80,7 @@ impl Node {
     }
     
     // Selects the best child node based on the UCB1 formula
-    fn select_child(&mut self, e: bool) -> &mut Node {
+    fn select_child(&mut self) -> &mut Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
         for child in self.children.iter_mut() {
@@ -90,9 +90,6 @@ impl Node {
             } else {
                 f64::MAX
             };
-            if e {
-                println!("Visits: {}, \t {score}", ((child.visits as f64/self.visits as f64)*100.).round());
-            }
             if score >= best_score {
                 best_child = Some(child);
                 best_score = score;
