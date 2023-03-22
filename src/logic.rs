@@ -7,7 +7,7 @@ use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
 pub struct OwnLogic;
 
 pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
-pub const TIME_LIMIT: u128 = 1900;
+pub const TIME_LIMIT: u128 = 1800;
 pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
@@ -29,7 +29,7 @@ impl GameClientDelegate for OwnLogic {
         }
 
         //Return best move
-        root.select_child().state.last_move().unwrap()
+        root.select_child(true).state.last_move().unwrap()
 
     }
 
@@ -67,29 +67,32 @@ impl Node {
             if self.children.is_empty() {
                 self.expand();
             }
-            let selected_child = self.select_child();
+            let selected_child = self.select_child(false);
             result = selected_child.mcts(team);
         } else {
             for _i in 0..SIMULATIONS_PER_ROLLOUT {
                 result += self.rollout(team);
             }
         }
-        self.visits += 1;
-        self.total += result;
+        self.visits += SIMULATIONS_PER_ROLLOUT;
+        self.total += if self.state.current_team() == *team {1. - result} else {result};
         return result;
     }
     
     // Selects the best child node based on the UCB1 formula
-    fn select_child(&mut self) -> &mut Node {
+    fn select_child(&mut self, e: bool) -> &mut Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
         for child in self.children.iter_mut() {
             let score = if child.visits > 0 {
-                child.total / ((child.visits as f64)*SIMULATIONS_PER_ROLLOUT as f64)
+                child.total / child.visits as f64
                 + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
             } else {
                 f64::MAX
             };
+            if e {
+                println!("Visits: {}, \t {score}", ((child.visits as f64/self.visits as f64)*100.).round());
+            }
             if score >= best_score {
                 best_child = Some(child);
                 best_score = score;
@@ -108,8 +111,7 @@ impl Node {
     }
 
     // Performs a random rollout from the current state
-    // Returns a number between 0 and 1
-    // The number resembles how many percent of fish the player has at the end of the game
+    // Returns 1 if the current team wins, 0 if the opponent wins and 0.5 if it's a draw
     fn rollout(&mut self, team: &Team) -> f64 {
         let mut state = self.state.clone();
         while !state.is_over() {
@@ -118,9 +120,15 @@ impl Node {
                 .expect("No move found!");
             state.perform(random_move);
         }
-        let us = state.fish(team.to_owned()) as f64;
-        let opponent = state.fish(team.opponent()) as f64;
-        (us)/(us+opponent)
+        let us = state.fish(team.to_owned());
+        let opponent = state.fish(team.opponent());
+        if us > opponent {
+            return 1.;
+        } else if us < opponent {
+            return 0.;
+        } else {
+            return 0.5;
+        }
     }
 
 }
