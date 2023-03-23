@@ -27,7 +27,7 @@ impl GameClientDelegate for OwnLogic {
         }
         println!("{}", index);
         //Return best move
-        root.select_next_move().state.last_move().unwrap()
+        root.select_child().state.last_move().unwrap()
 
     }
 
