@@ -44,6 +44,6 @@ fn main() {
         debug_writer: args.debug_writer,
     };
 
-    let client = GameClient::new(OwnLogic, debug_mode, args.reservation);
+    let client = GameClient::new(OwnLogic {game_tree: None}, debug_mode, args.reservation);
     let _result = client.connect(&args.host, args.port).expect("Error while running client.");
 }

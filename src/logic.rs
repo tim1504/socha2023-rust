@@ -4,7 +4,9 @@ use std::time;
 
 use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
 
-pub struct OwnLogic;
+pub struct OwnLogic {
+    pub game_tree: Option<Node>,
+}
 
 pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
 pub const TIME_LIMIT: u128 = 1800;
@@ -15,10 +17,32 @@ impl GameClientDelegate for OwnLogic {
 
         info!("Requested move");
 
-        //Create root node
-        let mut root = Node::new(state.clone());
+        let mut root = None;
 
-        //Expand root node
+        if self.game_tree.is_some() {
+            let game_tree = self.game_tree.clone().unwrap();
+            for n1 in game_tree.children {
+                if n1.state == *state {
+                    println!("Found game tree");
+                    println!("{}", n1.visits);
+                    root = Some(n1);
+                } else {
+                    for n2 in n1.children {
+                        if n2.state == *state {
+                            println!("Found game tree");
+                            println!("{}", n2.visits);
+                            root = Some(n2);
+                        }
+                    }
+                }
+            }
+        }
+
+        if root.is_none() {
+            info!("No game tree found");
+        }
+
+        let root = &mut root.unwrap_or( Node::new(state.clone()));
         root.expand();
 
         let start = time::Instant::now();
@@ -28,8 +52,11 @@ impl GameClientDelegate for OwnLogic {
             root.mcts(&state.current_team());
         }
 
-        //Return the move with the highest number of visits
-        root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap()
+        let return_val = root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap().clone();
+
+        self.game_tree = Some(root.clone());
+
+        return_val
 
     }
 
@@ -40,7 +67,8 @@ impl GameClientDelegate for OwnLogic {
 }
 
 //Node struct for MCTS algorithm
-struct Node {
+#[derive(Clone)]
+pub struct Node {
     state: State,
     children: Vec<Node>,
     visits: u32,
