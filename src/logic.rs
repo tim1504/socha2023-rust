@@ -69,7 +69,7 @@ impl Node {
             result = selected_child.mcts(team);
         } else {
             for _i in 0..100 {
-                result += self.rollout(team);
+                result += self.rollout(team) as i32;
             }
         }
         self.visits += 1;
@@ -120,7 +120,7 @@ impl Node {
     // Performs a random rollout from the current state
     // Returns a number between 0 and 1
     // The number resembles how many percent of fish the player has at the end of the game
-    fn rollout(&mut self, team: &Team) -> i32 {
+    fn rollout(&mut self, team: &Team) -> f64 {
         let mut state = self.state.clone();
         while !state.is_over() {
             let random_move = *state.possible_moves()
@@ -128,9 +128,15 @@ impl Node {
                 .expect("No move found!");
             state.perform(random_move);
         }
-        let us = state.fish(team.to_owned()) as i32;
-        let opponent = state.fish(team.opponent()) as i32;
-        (us)/(us+opponent)
+        let us = state.fish(team.to_owned());
+        let opponent = state.fish(team.opponent());
+        if us > opponent {
+            return 1.;
+        } else if us < opponent {
+            return 0.;
+        } else {
+            return 0.5;
+        }
     }
 
 }
