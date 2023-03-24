@@ -94,19 +94,6 @@ impl Node {
         best_child.unwrap()
     }
 
-    //selects the child in which the algorithm trusts most
-    fn select_next_move(&mut self) -> &mut Node {
-        let mut highest_trust = i32::MIN;
-        let mut best_child = None;
-        for child in self.children.iter_mut() {
-            println!("{}",child.visits as i32);
-            if child.visits > highest_trust {
-                highest_trust = child.visits;
-                best_child = Some(child);
-            }
-        }
-        best_child.unwrap()
-    }
 
     // Expands the node by creating a child node for each possible move
     fn expand(&mut self) {
