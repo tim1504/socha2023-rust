@@ -9,13 +9,15 @@ pub struct OwnLogic {
 }
 
 pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
-pub const TIME_LIMIT: u128 = 1800;
+pub const TIME_LIMIT: u128 = 1900;
 pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
 
         info!("Requested move");
+
+        let start = time::Instant::now();
 
         // Check if the game tree contains the current state
         let mut alpha_root = None;
@@ -37,7 +39,6 @@ impl GameClientDelegate for OwnLogic {
         }
 
         // Run MCTS algorithm for about 2 seconds
-        let start = time::Instant::now();
         while start.elapsed().as_millis() < TIME_LIMIT {
             root.mcts(&state.current_team());
         }
