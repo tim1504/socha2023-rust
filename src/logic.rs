@@ -17,46 +17,36 @@ impl GameClientDelegate for OwnLogic {
 
         info!("Requested move");
 
-        let mut root = None;
-
+        // Check if the game tree contains the current state
+        let mut alpha_root = None;
         if self.game_tree.is_some() {
-            let game_tree = self.game_tree.clone().unwrap();
-            for n1 in game_tree.children {
-                if n1.state == *state {
-                    println!("Found game tree");
-                    println!("{}", n1.visits);
-                    root = Some(n1);
-                } else {
-                    for n2 in n1.children {
-                        if n2.state == *state {
-                            println!("Found game tree");
-                            println!("{}", n2.visits);
-                            root = Some(n2);
-                        }
-                    }
+            let game_tree = self.game_tree.take().unwrap();
+            for node in game_tree.children.iter().flat_map(|n| n.children.iter().chain(Some(n))) {
+                if node.state == *state {
+                    alpha_root = Some(node.to_owned());
+                    break;
                 }
             }
         }
+        // Else create a new game tree
+        let mut alpha_root: Node = alpha_root.unwrap_or(Node::new(state.clone()));
 
-        if root.is_none() {
-            info!("No game tree found");
+        let root = &mut alpha_root;
+        if root.children.is_empty() {
+            root.expand();
         }
 
-        let root = &mut root.unwrap_or( Node::new(state.clone()));
-        root.expand();
-
+        // Run MCTS algorithm for about 2 seconds
         let start = time::Instant::now();
-
-        //Run MCTS algorithm for about 2 seconds
         while start.elapsed().as_millis() < TIME_LIMIT {
             root.mcts(&state.current_team());
         }
 
-        let return_val = root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap().clone();
-
-        self.game_tree = Some(root.clone());
-
-        return_val
+        // Select move with highest visits
+        let best_move = root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap().clone();
+        // Save the game tree for the next move
+        self.game_tree = Some(alpha_root);
+        best_move
 
     }
 
@@ -66,7 +56,7 @@ impl GameClientDelegate for OwnLogic {
     
 }
 
-//Node struct for MCTS algorithm
+// Node struct for MCTS algorithm
 #[derive(Clone)]
 pub struct Node {
     state: State,
@@ -75,7 +65,7 @@ pub struct Node {
     total: f64,
 }
 
-//Node methods
+// Node methods
 impl Node {
 
     // Constructor
