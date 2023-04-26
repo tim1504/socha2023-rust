@@ -2,7 +2,7 @@ use log::{info, debug};
 use rand::seq::SliceRandom;
 use std::time;
 
-use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
+use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State, Board, Doubled, Vec2}};
 
 pub struct OwnLogic {
     pub game_tree: Option<Node>,
@@ -43,6 +43,9 @@ impl GameClientDelegate for OwnLogic {
             root.mcts(&state.current_team());
         }
 
+        println!("{}", root.depth());
+        //root.print_tree(0);
+        
         // Select move with highest visits
         let best_move = root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap().clone();
         // Save the game tree for the next move
@@ -79,6 +82,23 @@ impl Node {
         }
     }
 
+    fn depth(&self) -> usize {
+        if self.children.is_empty() {
+            // If the node has no children, its depth is 1.
+            1
+        } else {
+            // Otherwise, the depth of the node is the maximum depth of its children plus 1.
+            self.children.iter().map(|child| child.depth()).max().unwrap() + 1
+        }
+    }
+
+    fn print_tree(&self, indent: usize) {
+        println!("{}Node", " ".repeat(indent * 4));
+        for child in self.children.iter() {
+            child.print_tree(indent + 1);
+        }
+    }
+
     // MCTS algorithm
     fn mcts(&mut self, team: &Team) -> f64 {
         let mut result = 0.;
@@ -89,11 +109,9 @@ impl Node {
             let selected_child = self.select_child();
             result = selected_child.mcts(team);
         } else {
-            for _i in 0..SIMULATIONS_PER_ROLLOUT {
-                result += self.rollout(team);
-            }
+            result += heuristic(&self.state, team);
         }
-        self.visits += SIMULATIONS_PER_ROLLOUT;
+        self.visits += 1;
         self.total += if self.state.current_team() == *team {1. - result} else {result};
         return result;
     }
@@ -147,4 +165,76 @@ impl Node {
         }
     }
 
+}
+
+fn heuristic(state: &State, team: &Team) -> f64 {
+    let us = state.fish(*team) as f64;
+    let opponent = state.fish(team.opponent()) as f64;
+    if state.is_over() {
+        if us > opponent {
+            return f64::MAX;
+        } else if us < opponent {
+            return f64::MIN;
+        } else {
+            return 0.;
+        }
+    }
+    let mut freedom = 0.;
+    let mut starting_points_own = Vec::<usize>::new();
+    let mut starting_points_enemy = Vec::<usize>::new();
+
+    for field in state.board().fields() {
+        let index = Board::index_for(field.0);
+        if field.1.is_occupied() == true {
+            if field.1.penguin().as_ref().unwrap().eq(&team){
+                starting_points_own.push(index);
+            }else{
+                starting_points_enemy.push(index);
+            }
+        }
+    }
+    let mut starting_points_own_ = Vec::<Vec2<Doubled>>::new();
+    let mut starting_points_enemy_ = Vec::<Vec2<Doubled>>::new();
+
+    for field in starting_points_own {
+        let coords = Board::coords_for(field);
+        let moves = state.board().possible_moves_from(coords);
+
+        for m in moves {
+            starting_points_own_.push(m.to());
+        }
+
+        freedom = freedom + starting_points_own_.len() as f64;
+    }
+
+    for field in starting_points_enemy {
+        let coords = Board::coords_for(field);
+        let moves = state.board().possible_moves_from(coords);
+
+
+        for m in moves{
+            starting_points_enemy_.push(m.to());
+        }
+
+        freedom = freedom - starting_points_enemy_.len() as f64;
+    }
+
+
+
+    for field in starting_points_own_ {
+        let moves = state.board().possible_moves_from(field);
+        freedom = freedom + moves.count()as f64;
+    }
+
+    for field in starting_points_enemy_ {
+        let moves = state.board().possible_moves_from(field);
+        freedom = freedom - moves.count()as f64;
+    }
+
+
+
+    let score_diff = us - opponent;
+    
+
+    return score_diff as f64;
 }
