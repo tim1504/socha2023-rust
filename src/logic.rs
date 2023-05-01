@@ -92,8 +92,8 @@ impl Node {
             for _i in 0..SIMULATIONS_PER_ROLLOUT {
                 result += self.rollout(team);
             }
+            result /= SIMULATIONS_PER_ROLLOUT as f64;
         }
-        result /= SIMULATIONS_PER_ROLLOUT as f64;
         self.visits += 1;
         self.total += if self.state.current_team() == *team {1. - result} else {result};
         return result;
