@@ -1,6 +1,6 @@
 use log::{info, debug};
 use rand::seq::SliceRandom;
-use std::time;
+use std::time::{self};
 
 use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
 
@@ -17,7 +17,7 @@ impl GameClientDelegate for OwnLogic {
 
         info!("Requested move");
 
-        let start = time::Instant::now();
+        let mut start = time::Instant::now();
 
         // Check if the game tree contains the current state
         let mut alpha_root = None;
@@ -44,8 +44,22 @@ impl GameClientDelegate for OwnLogic {
         }
 
         // Select move with highest visits
-        let best_node: Node = root.children.iter().max_by_key(|c| c.visits).unwrap().clone();
+        let mut best_node: Node = root.children.iter().max_by_key(|c| c.visits).unwrap().clone();
         println!("{}", best_node.total / best_node.visits as f64);
+
+
+        start = time::Instant::now();
+
+        let mut s = 0.0;
+        for _i in 0..100{
+            s += best_node.rollout(&_my_team);
+        }
+        println!("{}", s/100.0);
+
+        let duration = start.elapsed();
+        println!("Time elapsed: {:?}", duration);
+
+        
         let best_move = best_node.state.last_move().unwrap().clone();
         // Save the game tree for the next move
         self.game_tree = Some(alpha_root);
