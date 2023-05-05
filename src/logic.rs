@@ -62,6 +62,7 @@ impl GameClientDelegate for OwnLogic {
 
         let duration = start.elapsed();
         println!("Time elapsed: {:?}", duration);
+        println!("current team: {}", state.current_team().index());
 
         
         let best_move = best_node.state.last_move().unwrap().clone();
