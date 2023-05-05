@@ -44,8 +44,8 @@ impl GameClientDelegate for OwnLogic {
         }
 
         // Select move with highest visits
-        let mut best_node: Node = root.children.iter().max_by_key(|c| c.visits).unwrap().clone();
-        println!("{}", best_node.total / best_node.visits as f64);
+        let mut best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
+        println!("{}", best_node.total as f64);
 
 
         start = time::Instant::now();
@@ -106,14 +106,44 @@ impl Node {
             }
             let selected_child = self.select_child(team);
             result = selected_child.mcts(team, depth + 1);
+            println!("mcts performed");
         } else {
             for _i in 0..SIMULATIONS_PER_ROLLOUT {
                 result += self.rollout(team);
             }
             result /= SIMULATIONS_PER_ROLLOUT as f64;
+            println!("rollout performed at depth: {}{}{}", depth, " with the result: {}", result);
         }
         self.visits += 1;
-        self.total += result;
+        self.total = result;
+        if self.state.current_team().eq(team){
+            for n in &self.children{
+                if n.total > result && result <= 1.0 && n.visits > 0{
+                    result = n.total;
+                }
+            }
+            println!("we");
+            println!("{}", result);
+            println!(" {}", self.children.len());
+            for n in &self.children {
+                print!(" ,{}", n.total);
+            }
+            println!("");
+        }else{
+            for n in &self.children{
+                if n.total < result && result <= 1.0 && n.visits > 0{
+                    result = n.total;
+                }
+            }
+            println!("enemy");
+            println!("{}", result);
+            println!(" {}", self.children.len());
+            for n in &self.children {
+                print!(" ,{}", n.total);
+            }
+            println!("");
+        }
+       
         return result;
     }
     
@@ -124,10 +154,10 @@ impl Node {
         for child in self.children.iter_mut() {
             let score = if child.visits > 0 {
                 if self.state.current_team().eq(team){
-                    child.total / child.visits as f64
+                    child.total as f64
                     + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
                 }else{
-                    1.0 - (child.total / child.visits as f64)
+                    1.0 - (child.total as f64)
                     + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
                 }
                 
