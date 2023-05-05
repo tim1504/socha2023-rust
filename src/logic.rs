@@ -47,6 +47,10 @@ impl GameClientDelegate for OwnLogic {
         let mut best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
         println!("{}", best_node.total as f64);
 
+        for n in &root.children {
+            print!(" ,{}", n.total);
+        }
+        println!("");
 
         start = time::Instant::now();
 
@@ -106,13 +110,13 @@ impl Node {
             }
             let selected_child = self.select_child(team);
             result = selected_child.mcts(team, depth + 1);
-            println!("mcts performed");
+            println!("mcts performed at depth: {}", depth);
         } else {
             for _i in 0..SIMULATIONS_PER_ROLLOUT {
                 result += self.rollout(team);
             }
             result /= SIMULATIONS_PER_ROLLOUT as f64;
-            println!("rollout performed at depth: {}{}{}", depth, " with the result: {}", result);
+            println!("rollout performed at depth: {}{}{}", depth, " with the result: ", result);
         }
         self.visits += 1;
         self.total = result;
@@ -126,7 +130,7 @@ impl Node {
             println!("{}", result);
             println!(" {}", self.children.len());
             for n in &self.children {
-                print!(" ,{}", n.total);
+                print!("[{}{}", n.total, "]");
             }
             println!("");
         }else{
@@ -139,7 +143,7 @@ impl Node {
             println!("{}", result);
             println!(" {}", self.children.len());
             for n in &self.children {
-                print!(" ,{}", n.total);
+                print!("[{}{}", n.total, "]");
             }
             println!("");
         }
