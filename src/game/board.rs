@@ -44,13 +44,13 @@ impl Board {
     }
 
     /// Converts coordinates to an index.
-    fn index_for(coords: impl Into<Vec2<Doubled>>) -> usize {
+    pub fn index_for(coords: impl Into<Vec2<Doubled>>) -> usize {
         let direct: Vec2<Direct> = coords.into().into();
         direct.y as usize * BOARD_SIZE + direct.x as usize
     }
 
     /// Converts an index to coordinates.
-    fn coords_for(index: usize) -> Vec2<Direct> {
+    pub fn coords_for(index: usize) -> Vec2<Direct> {
         Vec2::new((index % BOARD_SIZE) as i32, (index / BOARD_SIZE) as i32)
     }
 
