@@ -9,7 +9,7 @@ pub struct OwnLogic {
 }
 
 pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
-pub const TIME_LIMIT: u128 = 1900;
+pub const TIME_LIMIT: u128 = 1000;
 pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
@@ -120,7 +120,7 @@ impl Node {
         self.total = result;
         if self.state.current_team().eq(team){
             for n in &self.children{
-                if n.total > result && result <= 1.0 && n.visits > 0{
+                if n.total > result && result <= 100.0 && n.visits > 0{
                     result = n.total;
                 }
             }
