@@ -1,8 +1,8 @@
 use log::{info, debug};
 use rand::seq::SliceRandom;
-use std::time::{self};
+use std::{time::{self}, collections::{HashMap, BinaryHeap}, cmp::Ordering};
 
-use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State}};
+use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State, Board}};
 
 pub struct OwnLogic {
     pub game_tree: Option<Node>,
@@ -104,7 +104,7 @@ impl Node {
     fn mcts(&mut self, team: &Team, depth: i32) -> f64 {
         //println!("{}", self.state.current_team().index());
         //println!("{}", depth);
-        let mut result = 0.;
+        let mut result;
         if self.visits > 0 && !self.state.is_terminal() {
             if self.children.is_empty() {
                 self.expand();
@@ -113,10 +113,7 @@ impl Node {
             result = selected_child.mcts(team, depth + 1);
             println!("mcts performed at depth: {}", depth);
         } else {
-            for _i in 0..SIMULATIONS_PER_ROLLOUT {
-                result += self.rollout(team);
-            }
-            result /= SIMULATIONS_PER_ROLLOUT as f64;
+            result = heuristic(&self.state, team);
             println!("rollout performed at depth: {}{}{}", depth, " with the result: ", result);
         }
         self.visits += 1;
@@ -136,7 +133,7 @@ impl Node {
             println!("");
         }else{
             for n in &self.children{
-                if n.total < result && result <= 1.0 && n.visits > 0{
+                if n.total < result && result <= 100.0 && n.visits > 0{
                     result = n.total;
                 }
             }
@@ -162,7 +159,7 @@ impl Node {
                     child.total as f64
                     + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
                 }else{
-                    1.0 - (child.total as f64)
+                    -1.0 * (child.total as f64)
                     + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
                 }
                 
@@ -212,4 +209,211 @@ impl Node {
         }
     }
 
+}
+
+
+struct Edge {
+    to: usize,
+    cost: i64,
+}
+
+#[derive(Copy, Clone, Eq, PartialEq)]
+struct GNode {
+    index: usize,
+    distance: i64,
+}
+
+
+
+impl Ord for GNode {
+    fn cmp(&self, other: &GNode) -> Ordering {
+        other.distance.cmp(&self.distance)
+    }
+}
+
+impl PartialOrd for GNode {
+    fn partial_cmp(&self, other: &GNode) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+struct Graph {
+    adj_list: HashMap<usize, Vec<Edge>>,
+}
+
+impl Graph {
+    fn new() -> Self {
+        Self {
+            adj_list: HashMap::new(),
+        }
+    }
+
+    fn add_edge(&mut self, u: usize, v: usize, w: i64) {
+        self.adj_list.entry(u).or_insert(vec![]).push(Edge {
+            to: v,
+            cost: w,
+        });
+ 
+    }
+
+    fn dijkstra(&self, start: usize) -> Vec<i64> {
+        let mut dist = vec![i64::MAX; self.adj_list.len()];
+        let mut heap = BinaryHeap::new();
+
+        dist[start] = 0;
+        heap.push(GNode {
+            index: start,
+            distance: 0,
+        });
+
+        while let Some(GNode { index: u, distance: _ }) = heap.pop() {
+            for Edge { to, cost } in self.adj_list.get(&u).unwrap_or(&vec![]) {
+                let alt = dist[u] + cost;
+                let to_dist = dist.get_mut(*to);
+                if let Some(to_dist) = to_dist {
+                    if alt < *to_dist {
+                        *to_dist = alt;
+                        heap.push(GNode {
+                            index: *to,
+                            distance: -alt,
+                        });
+                    }
+                }
+            }
+        }
+
+        dist
+    }
+    
+
+}
+
+
+
+fn heuristic(state: &State, my_team: &Team) -> f64{
+    let mut graph = Graph::new();
+    let mut starting_points_own = Vec::<usize>::new();
+    let mut starting_points_enemy = Vec::<usize>::new();
+    let start = std::time::Instant::now();
+    
+    //Creating the Graph
+    for field in state.board().fields() {
+        let index = Board::index_for(field.0);
+        if field.1.is_occupied() == true {
+            if field.1.penguin().as_ref().unwrap().eq(&my_team){
+                starting_points_own.push(index);
+            }else{
+                starting_points_enemy.push(index);
+            }
+        }
+
+        let mut moves = state.board().possible_moves_from(field.0);
+        if moves.count() as i32 == 0 {
+            graph.add_edge(index, index, 0);
+        }
+        moves = state.board().possible_moves_from(field.0);
+        for neighbour in moves{
+            let neighbour_coords = neighbour.to();
+            let neighbour_index = Board::index_for(neighbour_coords);
+
+            graph.add_edge(index, neighbour_index, 1);
+        }
+    }
+    //println!("Graph has been created.");
+    //println!("{}", graph.adj_list.len());
+    //print_adj_list(&graph);
+
+    let mut own_1 = vec![std::i64::MAX; 64];
+    let mut own_2 = vec![std::i64::MAX; 64];
+    let mut own_3 = vec![std::i64::MAX; 64];
+    let mut own_4 = vec![std::i64::MAX; 64];
+    if starting_points_own.len() > 0{
+        own_1 = graph.dijkstra(starting_points_own[0]);
+        if starting_points_own.len() > 1{
+            own_2 = graph.dijkstra(starting_points_own[1]);
+            if starting_points_own.len() > 2{
+                own_3 = graph.dijkstra(starting_points_own[2]);
+                if starting_points_own.len() > 3{
+                    own_4 = graph.dijkstra(starting_points_own[3]);
+                }
+            }
+        }
+    }
+    let own = find_min_values(&own_1, &own_2, &own_3, &own_4);
+    
+    let mut enemy_1 = vec![std::i64::MAX; 64];
+    let mut enemy_2 = vec![std::i64::MAX; 64];
+    let mut enemy_3 = vec![std::i64::MAX; 64];
+    let mut enemy_4 = vec![std::i64::MAX; 64];
+    if starting_points_enemy.len() > 0{
+        enemy_1 = graph.dijkstra(starting_points_enemy[0]);
+        if starting_points_enemy.len() > 1{
+            enemy_2 = graph.dijkstra(starting_points_enemy[1]);
+            if starting_points_enemy.len() > 2{
+                enemy_3 = graph.dijkstra(starting_points_enemy[2]);
+                if starting_points_enemy.len() > 3{
+                    enemy_4 = graph.dijkstra(starting_points_enemy[3]);
+                }
+            }
+        }
+    }
+    //println!("Dijkstra succesfull");
+    //println!("{:?}", starting_points_enemy);
+
+    let enemy =find_min_values(&enemy_1, &enemy_2, &enemy_3, &enemy_4);
+
+    let lists = compare_lists(&own, &enemy);
+    
+    let mut value_own = 0.0;
+    for n in lists.0{
+        if own[n] != 0{
+            value_own += state.board().get(Board::coords_for(n)).expect("REASON").fish() as f64 / own[n] as f64;
+        }
+        
+    }
+
+    let mut value_enemy = 0.0;
+    for n in lists.1{
+        if enemy[n] != 0{
+            value_enemy += state.board().get(Board::coords_for(n)).expect("REASON").fish() as f64 / enemy[n] as f64;
+        }
+        
+    }
+    
+
+    let mut value = value_own - value_enemy;
+    //print!("{:?}", enemy);
+    let elapsed = start.elapsed();
+    let us = state.fish(my_team.to_owned());
+    let opponent = state.fish(my_team.opponent());
+    value = value + (us as f64 -opponent as f64);
+    println!("Shortest distances: {:?}", own);
+    println!("{}", value);
+    println!("Elapsed time: {} ms", elapsed.as_micros());
+    return value;
+}
+
+fn find_min_values(values_1: &[i64], values_2: &[i64], values_3: &[i64], values_4: &[i64]) -> Vec<i64> {
+    let mut min_values = Vec::with_capacity(values_1.len());
+    for i in 0..values_1.len() {
+        let min_value = std::cmp::min(
+            std::cmp::min(values_1[i], values_2[i]),
+            std::cmp::min(values_3[i], values_4[i]),
+        );
+        min_values.push(min_value);
+    }
+    min_values
+}
+
+fn compare_lists(list_a: &[i64], list_b: &[i64]) -> (Vec<usize>, Vec<usize>) {
+    let mut a_indices = Vec::new();
+    let mut b_indices = Vec::new();
+    for i in 0..list_a.len().min(list_b.len()) {
+        if list_a[i] < list_b[i] {
+            a_indices.push(i);
+        } else if list_a[i] > list_b[i] {
+            b_indices.push(i);
+        }
+    }
+    (a_indices, b_indices)
 }
