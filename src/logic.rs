@@ -1,7 +1,6 @@
 use log::{info, debug};
 use rand::seq::SliceRandom;
-use std::{time::{self}, collections::{HashMap, BinaryHeap}, cmp::Ordering};
-use colored::*;
+use std::{time, collections::{HashMap, BinaryHeap}, cmp::Ordering};
 
 use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State, Board}};
 
@@ -16,7 +15,7 @@ pub const EXPLORATION_CONSTANT: f64 = 1.41;
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
 
-        info!("{}", "Requested Move".white());
+        info!("{}", "Requested Move");
 
         let start = time::Instant::now();
 
@@ -46,10 +45,10 @@ impl GameClientDelegate for OwnLogic {
 
         // Select move with highest visits
         let best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
-        info!("{}{}", "Score of choosen move: ".green() ,format!("{:.2}",best_node.total));
-        info!("{}", "Children:".blue());
+        info!("{}{}", "Score of choosen move: " ,format!("{:.2}",best_node.total));
+        info!("{}", "Children:");
         for n in &root.children {
-            print!("{}{}{}", "[".blue(), format!("{:.2}",n.total), "]".blue());
+            print!("{}{}{}", "[", format!("{:.2}",n.total), "]");
         }
         println!("");
 
@@ -289,7 +288,7 @@ fn heuristic(state: &State, my_team: &Team) -> f64{
     let mut graph = Graph::new();
     let mut starting_points_own = Vec::<usize>::new();
     let mut starting_points_enemy = Vec::<usize>::new();
-    let start = std::time::Instant::now();
+    //let start = std::time::Instant::now();
     
     //Creating the Graph
     for field in state.board().fields() {
@@ -390,13 +389,6 @@ fn heuristic(state: &State, my_team: &Team) -> f64{
     return value;
 }
 
-fn qubic(x: f64, n: i32) -> f64{
-    let mut result = x;
-    for _i in 1..n{
-        result *= x;
-    }
-    return result; 
-}
 
 fn find_min_values(values_1: &[i64], values_2: &[i64], values_3: &[i64], values_4: &[i64]) -> Vec<i64> {
     let mut min_values = Vec::with_capacity(values_1.len());
