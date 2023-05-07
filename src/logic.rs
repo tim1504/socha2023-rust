@@ -1,6 +1,7 @@
 use log::{info, debug};
 use rand::seq::SliceRandom;
 use std::{time::{self}, collections::{HashMap, BinaryHeap}, cmp::Ordering};
+use colored::*;
 
 use socha_client_2023::{client::GameClientDelegate, game::{Move, Team, State, Board}};
 
@@ -8,16 +9,16 @@ pub struct OwnLogic {
     pub game_tree: Option<Node>,
 }
 
-pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
+//pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
 pub const TIME_LIMIT: u128 = 1000;
 pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
 
-        info!("Requested move");
+        info!("{}", "Requested Move".white());
 
-        let mut start = time::Instant::now();
+        let start = time::Instant::now();
 
         // Check if the game tree contains the current state
         let mut alpha_root = None;
@@ -44,25 +45,13 @@ impl GameClientDelegate for OwnLogic {
         }
 
         // Select move with highest visits
-        let mut best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
-        println!("{}", best_node.total as f64);
-
+        let best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
+        info!("{}{}", "Score of choosen move: ".green() ,format!("{:.2}",best_node.total));
+        info!("{}", "Children:".blue());
         for n in &root.children {
-            print!(" ,{}", n.total);
+            print!("{}{}{}", "[".blue(), format!("{:.2}",n.total), "]".blue());
         }
         println!("");
-
-        start = time::Instant::now();
-
-        let mut s = 0.0;
-        for _i in 0..100{
-            s += best_node.rollout(&_my_team);
-        }
-        println!("{}", s/100.0);
-
-        let duration = start.elapsed();
-        println!("Time elapsed: {:?}", duration);
-        println!("current team: {}", state.current_team().index());
 
         
         let best_move = best_node.state.last_move().unwrap().clone();
@@ -111,10 +100,10 @@ impl Node {
             }
             let selected_child = self.select_child(team);
             result = selected_child.mcts(team, depth + 1);
-            println!("mcts performed at depth: {}", depth);
+            //println!("mcts performed at depth: {}", depth);
         } else {
             result = heuristic(&self.state, team);
-            println!("rollout performed at depth: {}{}{}", depth, " with the result: ", result);
+            //println!("rollout performed at depth: {}{}{}", depth, " with the result: ", result);
         }
         self.visits += 1;
         self.total = result;
@@ -124,6 +113,7 @@ impl Node {
                     result = n.total;
                 }
             }
+            /*/
             println!("we");
             println!("{}", result);
             println!(" {}", self.children.len());
@@ -131,12 +121,14 @@ impl Node {
                 print!("[{}{}", n.total, "]");
             }
             println!("");
+            */
         }else{
             for n in &self.children{
                 if n.total < result && result <= 100.0 && n.visits > 0{
                     result = n.total;
                 }
             }
+            /*
             println!("enemy");
             println!("{}", result);
             println!(" {}", self.children.len());
@@ -144,6 +136,7 @@ impl Node {
                 print!("[{}{}", n.total, "]");
             }
             println!("");
+            */
         }
        
         return result;
@@ -190,6 +183,7 @@ impl Node {
 
     // Performs a random rollout from the current state
     // Returns 1 if the current team wins, 0 if the opponent wins and 0.5 if it's a draw
+    
     fn rollout(&mut self, team: &Team) -> f64 {
         let mut state = self.state.clone();
         while !state.is_over() {
@@ -208,6 +202,7 @@ impl Node {
             return 0.5;
         }
     }
+    
 
 }
 
@@ -367,7 +362,7 @@ fn heuristic(state: &State, my_team: &Team) -> f64{
     let mut value_own = 0.0;
     for n in lists.0{
         if own[n] != 0{
-            value_own += state.board().get(Board::coords_for(n)).expect("REASON").fish() as f64 / own[n] as f64;
+            value_own += state.board().get(Board::coords_for(n)).expect("REASON").fish() as f64;
         }
         
     }
@@ -375,7 +370,7 @@ fn heuristic(state: &State, my_team: &Team) -> f64{
     let mut value_enemy = 0.0;
     for n in lists.1{
         if enemy[n] != 0{
-            value_enemy += state.board().get(Board::coords_for(n)).expect("REASON").fish() as f64 / enemy[n] as f64;
+            value_enemy += state.board().get(Board::coords_for(n)).expect("REASON").fish() as f64;
         }
         
     }
@@ -383,14 +378,24 @@ fn heuristic(state: &State, my_team: &Team) -> f64{
 
     let mut value = value_own - value_enemy;
     //print!("{:?}", enemy);
-    let elapsed = start.elapsed();
+    //let elapsed = start.elapsed();
     let us = state.fish(my_team.to_owned());
     let opponent = state.fish(my_team.opponent());
-    value = value + (us as f64 -opponent as f64);
+    value += us as f64 - opponent as f64;
+    /*/
     println!("Shortest distances: {:?}", own);
     println!("{}", value);
     println!("Elapsed time: {} ms", elapsed.as_micros());
+    */
     return value;
+}
+
+fn qubic(x: f64, n: i32) -> f64{
+    let mut result = x;
+    for _i in 1..n{
+        result *= x;
+    }
+    return result; 
 }
 
 fn find_min_values(values_1: &[i64], values_2: &[i64], values_3: &[i64], values_4: &[i64]) -> Vec<i64> {
