@@ -9,7 +9,7 @@ pub struct OwnLogic {
 }
 
 //pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
-pub const TIME_LIMIT: u128 = 1000;
+pub const TIME_LIMIT: u128 = 1800;
 pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
