@@ -45,12 +45,8 @@ impl GameClientDelegate for OwnLogic {
 
         // Select move with highest visits
         let best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
-        info!("{}{}", "Score of choosen move: " ,format!("{:.2}",best_node.total));
-        info!("{}", "Children:");
-        for n in &root.children {
-            print!("{}{}{}", "[", format!("{:.2}",n.total), "]");
-        }
-        println!("");
+        info!("{}{}{}{}", "Current Score: ", format!("{:.2}",heuristic(state,&_my_team)), " -> Score of choosen move: " ,format!("{:.2}",best_node.total));
+        info!("Maximum depth of the Game Tree: {}", max_depth(&root));
 
         
         let best_move = best_node.state.last_move().unwrap().clone();
@@ -87,6 +83,9 @@ impl Node {
             total: 0.,
         }
     }
+
+    
+
 
     // MCTS algorithm
     fn mcts(&mut self, team: &Team, depth: i32) -> f64 {
@@ -203,6 +202,17 @@ impl Node {
     }
     
 
+}
+
+fn max_depth(root: &Node) -> u32 {
+    if root.children.is_empty() {
+        // Base case: the root has no children, so its depth is 1.
+        return 1;
+    } else {
+        // Recursive case: the depth of the root is the maximum depth of its children plus one.
+        let child_depths = root.children.iter().map(|child| max_depth(child));
+        return child_depths.max().unwrap() + 1;
+    }
 }
 
 
