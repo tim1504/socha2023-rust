@@ -10,7 +10,7 @@ pub struct OwnLogic {
 
 //pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
 pub const TIME_LIMIT: u128 = 1800;
-pub const EXPLORATION_CONSTANT: f64 = 1.41;
+pub const EXPLORATION_CONSTANT: f64 = 6.1;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
@@ -32,7 +32,7 @@ impl GameClientDelegate for OwnLogic {
         }
         // Else create a new game tree
         let mut alpha_root: Node = alpha_root.unwrap_or(Node::new(state.clone()));
-
+        info!("Maximum depth of the Game Tree at start: {}", max_depth(&alpha_root));
         let root = &mut alpha_root;
         if root.children.is_empty() {
             root.expand();
@@ -47,7 +47,7 @@ impl GameClientDelegate for OwnLogic {
         let best_node: Node = root.children.iter().max_by_key(|c| (c.total * 100.0) as i32).unwrap().clone();
         info!("{}{}{}{}", "Current Score: ", format!("{:.2}",heuristic(state,&_my_team)), " -> Score of choosen move: " ,format!("{:.2}",best_node.total));
         info!("Maximum depth of the Game Tree: {}", max_depth(&root));
-
+        info!("Node count: {}", count_nodes(root));
         
         let best_move = best_node.state.last_move().unwrap().clone();
         // Save the game tree for the next move
@@ -215,6 +215,13 @@ fn max_depth(root: &Node) -> u32 {
     }
 }
 
+fn count_nodes(node: &Node) -> usize {
+    let mut count = 1; // count this node
+    for child in &node.children {
+        count += count_nodes(child); // recursively count children
+    }
+    count
+}
 
 struct Edge {
     to: usize,
