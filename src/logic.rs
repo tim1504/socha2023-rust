@@ -9,8 +9,8 @@ pub struct OwnLogic {
 }
 
 //pub const SIMULATIONS_PER_ROLLOUT: u32 = 100;
-pub const TIME_LIMIT: u128 = 1800;
-pub const EXPLORATION_CONSTANT: f64 = 6.1;
+pub const TIME_LIMIT: u128 = 1000;
+pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
