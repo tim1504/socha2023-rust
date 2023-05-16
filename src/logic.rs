@@ -37,12 +37,12 @@ impl GameClientDelegate for OwnLogic {
         }
         
         // Run MCTS algorithm for about 2 seconds
-        while start.elapsed().as_millis() < TIME_LIMIT {
+        while start.elapsed().as_millis() < TIME_LIMIT && !root.fully_expanded {
             root.mcts(&state.current_team());
         }
 
         // Select move with highest visits
-        let best_move = root.children.iter().max_by_key(|c| c.visits).unwrap().state.last_move().unwrap().clone();
+        let best_move = root.children.iter().max_by_key(|c| c.total as i32).unwrap().state.last_move().unwrap().clone();
         // Save the game tree for the next move
         self.game_tree = Some(alpha_root);
         best_move
@@ -62,6 +62,7 @@ pub struct Node {
     children: Vec<Node>,
     visits: u32,
     total: f64,
+    fully_expanded: bool,
 }
 
 // Node methods
@@ -74,31 +75,35 @@ impl Node {
             children: Vec::new(),
             visits: 0,
             total: 0.,
+            fully_expanded: false,
         }
     }
 
     // MCTS algorithm
-    fn mcts(&mut self, team: &Team) -> f64 {
+    fn mcts(&mut self, team: &Team) -> (f64,bool) {
         let result;
         if self.visits > 0 && !self.state.is_terminal() {
             if self.children.is_empty() {
                 self.expand();
             }
             let selected_child = self.select_child(team);
-            result = selected_child.mcts(team);
+            let fully_expanded;
+            (result, fully_expanded) = selected_child.mcts(team);
+            if fully_expanded {self.fully_expanded = self.children.iter().all(|c| c.fully_expanded);}
         } else {
             result = self.rollout(team);
+            self.fully_expanded = self.state.is_terminal();
         }
         self.visits += 1;
         self.total += result;
-        return result;
+        return (result, self.fully_expanded);
     }
     
     // Selects the best child node based on the UCB1 formula
     fn select_child(&mut self, my_team: &Team) -> &mut Node {
         let mut best_score = f64::MIN;
         let mut best_child = None;
-        for child in self.children.iter_mut() {
+        for child in self.children.iter_mut().filter(|c| !c.fully_expanded) {
             let score = if child.visits > 0 {
                 let winrate = if self.state.current_team() == *my_team {child.total / child.visits as f64} else {1. - child.total / child.visits as f64};
                 winrate + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
