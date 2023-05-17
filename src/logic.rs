@@ -42,7 +42,7 @@ impl GameClientDelegate for OwnLogic {
         }
 
         // Select move with highest visits
-        let best_move = root.children.iter().max_by_key(|c| c.total as i32).unwrap().state.last_move().unwrap().clone();
+        let best_move = root.children.iter().max_by_key(|c| ((c.total/c.visits as f64)*1000000.) as i32).unwrap().state.last_move().unwrap().clone();
         // Save the game tree for the next move
         self.game_tree = Some(alpha_root);
         best_move
@@ -152,18 +152,17 @@ impl Node {
             }
             steps
         };
-        let fishes_us = fishes(*my_team);
-        let fishes_opponent = fishes(my_team.opponent());
-        //Caching could result in a performance boost
-        let fishes_total = s.board().fields().fold(0, |c, f| c + f.1.fish()) + s.fish(*my_team) + s.fish(my_team.opponent());
-        let mut score = (s.fish(*my_team) as f64) - (s.fish(my_team.opponent()) as f64);
+        let steps_us = fishes(*my_team);
+        let steps_opponent = fishes(my_team.opponent());
+        let mut fish_us = s.fish(*my_team) as f64;
+        let mut fish_opponent = s.fish(my_team.opponent()) as f64;
         for (c,f) in s.board().fields() {
             if f.is_empty() {continue;}
             let i = (c.y*8+c.x/2) as usize;
             let fish = f.fish() as f64;
-            score += if fishes_us[i] > fishes_opponent[i] {-fish/(fishes_opponent[i] as f64).sqrt()} else if fishes_us[i] < fishes_opponent[i] {fish/(fishes_us[i] as f64).sqrt()} else {0.0};
+            if steps_us[i] > steps_opponent[i] {fish_opponent += fish;} else if steps_us[i] < steps_opponent[i] {fish_us += fish;}
         }
-        (score as f64) / (2.*fishes_total as f64) + 0.5
+        ((fish_us)/(fish_us+fish_opponent)-fish_opponent/(fish_us+fish_opponent))/2.+0.5
     }
 
 }
