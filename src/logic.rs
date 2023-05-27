@@ -7,7 +7,7 @@ pub struct OwnLogic {
     pub game_tree: Option<Node>,
 }
 
-pub const TIME_LIMIT: u128 = 1900;
+pub const TIME_LIMIT: u128 = 1000;
 pub const EXPLORATION_CONSTANT: f64 = 1.41;
 
 impl GameClientDelegate for OwnLogic {
@@ -40,7 +40,7 @@ impl GameClientDelegate for OwnLogic {
         while start.elapsed().as_millis() < TIME_LIMIT && !root.fully_expanded {
             root.mcts(&state.current_team());
         }
-
+        println!("{}", root.total/root.visits as f64);
         // Select move with highest visits
         let best_move = root.children.iter().max_by_key(|c| ((c.total/c.visits as f64)*1000000.) as i32).unwrap().state.last_move().unwrap().clone();
         // Save the game tree for the next move
@@ -162,7 +162,11 @@ impl Node {
             let fish = f.fish() as f64;
             if steps_us[i] > steps_opponent[i] {fish_opponent += fish;} else if steps_us[i] < steps_opponent[i] {fish_us += fish;}
         }
-        ((fish_us)/(fish_us+fish_opponent)-fish_opponent/(fish_us+fish_opponent))/2.+0.5
+        let result = fish_us - fish_opponent;
+        if result > 0.0 {return 1.0;}
+        else if result < 0.0 {return 0.0;}
+        else {return 0.5;}
+
     }
 
 }
