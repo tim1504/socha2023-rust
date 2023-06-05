@@ -8,7 +8,7 @@ pub struct OwnLogic {
 }
 
 pub const TIME_LIMIT: u128 = 1000;
-pub const EXPLORATION_CONSTANT: f64 = 1.41;
+pub const EXPLORATION_CONSTANT: f64 = 2.82;
 
 impl GameClientDelegate for OwnLogic {
     fn request_move(&mut self, state: &State, _my_team: Team) -> Move {
@@ -41,6 +41,7 @@ impl GameClientDelegate for OwnLogic {
             root.mcts(&state.current_team());
         }
         println!("{}", root.total/root.visits as f64);
+        println!("Depth: {}", Node::max_depth(root));
         // Select move with highest visits
         let best_move = root.children.iter().max_by_key(|c| ((c.total/c.visits as f64)*1000000.) as i32).unwrap().state.last_move().unwrap().clone();
         // Save the game tree for the next move
@@ -76,6 +77,17 @@ impl Node {
             visits: 0,
             total: 0.,
             fully_expanded: false,
+        }
+    }
+
+    fn max_depth(root: &Node) -> u32 {
+        if root.children.is_empty() {
+            // Base case: the root has no children, so its depth is 1.
+            return 1;
+        } else {
+            // Recursive case: the depth of the root is the maximum depth of its children plus one.
+            let child_depths = root.children.iter().map(|child| Self::max_depth(child));
+            return child_depths.max().unwrap() + 1;
         }
     }
 
@@ -163,10 +175,7 @@ impl Node {
             if steps_us[i] > steps_opponent[i] {fish_opponent += fish;} else if steps_us[i] < steps_opponent[i] {fish_us += fish;}
         }
         let result = fish_us - fish_opponent;
-        if result > 0.0 {return 1.0;}
-        else if result < 0.0 {return 0.0;}
-        else {return 0.5;}
-
+        return result;
     }
 
 }
