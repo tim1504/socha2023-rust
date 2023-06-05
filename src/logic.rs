@@ -117,7 +117,7 @@ impl Node {
         let mut best_child = None;
         for child in self.children.iter_mut().filter(|c| !c.fully_expanded) {
             let score = if child.visits > 0 {
-                let winrate = if self.state.current_team() == *my_team {child.total / child.visits as f64} else {1. - child.total / child.visits as f64};
+                let winrate = if self.state.current_team() == *my_team {child.total / child.visits as f64} else {-1.* (child.total / child.visits as f64)};
                 winrate + EXPLORATION_CONSTANT * ((self.visits as f64).ln() / (child.visits as f64)).sqrt()
             } else {
                 f64::MAX
