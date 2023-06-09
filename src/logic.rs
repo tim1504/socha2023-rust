@@ -36,12 +36,12 @@ impl GameClientDelegate for OwnLogic {
             root.expand();
         }
         
-        // Run MCTS algorithm for about 2 seconds
+        // Run MCTS algorithm for a given amount of time
         while start.elapsed().as_millis() < TIME_LIMIT && !root.fully_expanded {
             root.mcts(&state.current_team());
         }
 
-        // Select move with highest visits
+        // Select move with highest reward
         let best_move = root.children.iter().max_by_key(|c| ((c.total/c.visits as f64)*1000000.) as i32).unwrap().state.last_move().unwrap().clone();
         // Save the game tree for the next move
         self.game_tree = Some(alpha_root);
@@ -55,20 +55,18 @@ impl GameClientDelegate for OwnLogic {
     
 }
 
-// Node struct for MCTS algorithm
 #[derive(Clone)]
 pub struct Node {
     state: State,
     children: Vec<Node>,
     visits: u32,
     total: f64,
+    // Whether all children of this node have been expanded
     fully_expanded: bool,
 }
 
-// Node methods
 impl Node {
 
-    // Constructor
     fn new(state: State) -> Self {
         Node {
             state,
@@ -79,8 +77,6 @@ impl Node {
         }
     }
 
-
-    // MCTS algorithm
     fn mcts(&mut self, team: &Team) -> (f64,bool) {
         let result;
         if self.visits > 0 && !self.state.is_terminal() {
@@ -128,8 +124,7 @@ impl Node {
         }
     }
 
-    // Performs a random rollout from the current state
-    // Returns 1 if the current team wins, 0 if the opponent wins and 0.5 if it's a draw
+    // Heuristic to predict the outcoming score of a game using Breadth-First-Search
     fn rollout(&mut self, my_team: &Team) -> f64 {
         let s = self.state;
         let fishes = |team: Team| -> [u8; 64] { 
