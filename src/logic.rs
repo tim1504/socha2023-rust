@@ -1,3 +1,12 @@
+
+/*
+Client by Team Gym Kenzingen K1, winner of the Software Challenge Germany 2023
+(c) 2023 David Ernst
+(c) 2023 Tim Himmelsbach
+
+Special thanks to the our computer sience teacher Mr. Ries
+*/
+
 use log::{info, debug};
 use std::{time, collections::HashSet};
 
